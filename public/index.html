@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToDo List</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #ff9800;
+    }
+    .todo-form input {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 300px;
+    }
+    .todo-form button {
+      padding: 0.5rem 1rem;
+      margin-left: 0.5rem;
+      background: #ff9800;
+      border: none;
+      cursor: pointer;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      width: 100%;
+      max-width: 400px;
+    }
+    li {
+      background: #1e1e1e;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 5px;
+    }
+    .completed {
+      text-decoration: line-through;
+      color: #777;
+    }
+    button.delete-btn {
+      background: red;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Мій список справ</h1>
+  <form class="todo-form">
+    <input type="text" id="todo-input" placeholder="Введіть завдання...">
+    <button type="submit">Додати</button>
+  </form>
+  <ul id="todo-list"></ul>
+
+  <script>
+    async function fetchTodos() {
+      const res = await fetch('/api/todos');
+      return res.json();
+    }
+
+    async function saveTodo(todo) {
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(todo)
+      });
+      return res.json();
+    }
+
+    async function deleteTodo(id) {
+      await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+    }
+
+    async function toggleTodo(id) {
+      await fetch(`/api/todos/${id}/toggle`, { method: 'PATCH' });
+    }
+
+    const form = document.querySelector('.todo-form');
+    const input = document.getElementById('todo-input');
+    const list = document.getElementById('todo-list');
+
+    async function renderTodos() {
+      const todos = await fetchTodos();
+      list.innerHTML = '';
+      todos.forEach((todo) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="${todo.completed ? 'completed' : ''}" data-id="${todo.id}">${todo.text}</span>
+          <button class="delete-btn" data-id="${todo.id}">X</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    list.addEventListener('click', async (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.tagName === 'SPAN') {
+        await toggleTodo(id);
+        renderTodos();
+      } else if (e.target.classList.contains('delete-btn')) {
+        await deleteTodo(id);
+        renderTodos();
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (text) {
+        await saveTodo({ text });
+        input.value = '';
+        renderTodos();
+      }
+    });
+
+    renderTodos();
+  </script>
+</body>
+</html>
